@@ -11,7 +11,7 @@ const Bottombar = () => {
 
         return (
 
-          <Link to={link.route} className={`flex-center flex-col gap-1 p-2 transition ${isActive && 'bg-primary-500 rounded-[10px]'}`}>
+          <Link to={link.route} key={`bottombar-${link.label}`} className={`flex-center flex-col gap-1 p-2 transition ${isActive && 'bg-primary-500 rounded-[10px]'}`}>
             <img src={link.imgURL} alt={link.label} width={16} height={16}/>
             <p className='tiny-medium text-light-2'>{link.label}</p></Link>
 

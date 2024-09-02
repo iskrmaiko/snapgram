@@ -1,6 +1,6 @@
-import { INewUser } from "@/types";
-import { account, appwriteConfig, avatars, database } from "./config";
-import { ID, Query } from "appwrite";
+import { INewPost, INewUser } from "@/types";
+import { account, appwriteConfig, avatars, database, storage } from "./config";
+import { ID, ImageGravity, Query } from "appwrite";
 export async function createUserAccount(user: INewUser) {
     try {
         const newAccount = await account.create(
@@ -90,4 +90,102 @@ export async function signOutAccount() {
         console.log(error);
         
     }
+}
+
+export async function createPost(post: INewPost) {
+    try {
+        //Upload image to storage
+        const uploadedFile = await uploadFile(post.file[0]);
+
+        if(!uploadedFile) throw Error;
+
+        //Get file url
+        const fileUrl = getFilePreview(uploadedFile.$id);
+        console.log(uploadedFile)
+        if(!fileUrl){
+            deleteFile(uploadedFile.$id);
+            throw Error;
+        }
+
+        //Convert tags to array
+        const tags = post.tags?.replace(/ /g, '').split(',') || [];
+
+        //Save post to DB
+        const newPost = await database.createDocument(
+            appwriteConfig.databaseId,
+            appwriteConfig.postCollectionId,
+            ID.unique(),
+            {
+                creator: post.userId,
+                caption: post.caption,
+                imageUrl: fileUrl,
+                imageId: uploadedFile.$id,
+                location: post.location,
+                tags: tags
+            }
+        )
+        if(!newPost){
+            await deleteFile(uploadedFile.$id)
+            throw Error;
+        }
+
+    } catch (error) {
+        console.log(error);
+        
+    }
+}
+
+export async function uploadFile(file: File) {
+    try {
+        const uploadedFile = await storage.createFile(
+            appwriteConfig.storageId,
+            ID.unique(),
+            file
+        );
+        return uploadedFile;
+        
+    } catch (error) {
+        console.log(error);
+        
+    }
+}
+
+export function getFilePreview(fileId: string) {
+    try {
+      const fileUrl = storage.getFilePreview(
+        appwriteConfig.storageId,
+        fileId,
+        2000,
+        2000,
+        ImageGravity.Top,
+        100
+      );
+  
+      if (!fileUrl) throw Error;
+  
+      return fileUrl;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+export async function deleteFile(fileId: string) {
+    try {
+        await storage.deleteFile(appwriteConfig.storageId, fileId);
+        return { status: 'ok'}
+    } catch (error) {
+        console.log(error);
+        
+    }
+}
+
+export async function getRecentPost() {
+    const posts = await database.listDocuments(
+        appwriteConfig.databaseId,
+        appwriteConfig.postCollectionId,
+        [Query.orderDesc('$createdAt'), Query.limit(20)]
+    )
+
+    if(!posts) throw Error;
+    return posts;
 }
