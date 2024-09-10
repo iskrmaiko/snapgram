@@ -43,35 +43,29 @@ const PostForm = ({ post, action }: PostFormProps) => {
     },
   })
 
-  // 2. Define a submit handler.
-  async function onSubmit(values: z.infer<typeof PostValidation>) {
-    if(post && action === 'Update'){
-      const updatedPost = await updatePost({
-        ...values,
-        postId: post.$id,
-        imageId: post?.imageId, 
-        imageUrl: post?.imageUrl
-      })
-
-      if(!updatedPost){
-        toast({title: 'Please try again'})
+  const onSubmit = async (values: z.infer<typeof PostValidation>) => {
+    try {
+      if (post && action === 'Update') {
+        await updatePost({
+          ...values,
+          postId: post.$id,
+          imageId: post.imageId,
+          imageUrl: post.imageUrl
+        });
+  
+        navigate(`/posts/${post.$id}`);
+      } else {
+        await createPost({
+          ...values,
+          userId: user.id,
+        });
+  
+        navigate('/');
       }
-      return navigate(`/posts/${post.$id}`)
+    } catch (error) {
+      toast({ title: (error as Error).message || 'Please try again' });
     }
-
-    const newPost = await createPost({
-      ...values,
-      userId: user.id,
-    })
-
-    if(!newPost){
-      toast({
-        title: "Please try again",
-        
-      })
-    }
-    navigate('/')
-  }
+  };
 
 
   return (
@@ -133,7 +127,7 @@ const PostForm = ({ post, action }: PostFormProps) => {
           )}
         />
         <div className="flex gap-4 items-center justify-end">
-          <Button type="button" className="shad-button_dark_4">Cancel</Button>
+          <Button type="button" className="shad-button_dark_4" onClick={() => navigate(-1)}>Cancel</Button>
           <Button type="submit" className="shad-button_primary whitespace-nowrap" disabled= {isLoadingCreate || isLoadingUpdate}>
             {isLoadingCreate || isLoadingUpdate &&'Loading...'}
             {action} Post</Button>
